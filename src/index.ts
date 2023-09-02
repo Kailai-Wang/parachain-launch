@@ -81,10 +81,10 @@ const getChainspec = (image: string, chain: string) => {
   const tmpChainSpec = `${shell.tempdir()}/${chain}-${new Date().toISOString().slice(0, 10)}.json`;
   if (chain.endsWith('.json')) {
     exec(
-      `docker run -v $(pwd)/${chain}:/${chain} --rm ${image} build-spec --chain=/${chain} --disable-default-bootnode > ${tmpChainSpec}`,
+      `stdbuf -i0 -o0 -e0 docker run -v $(pwd)/${chain}:/${chain} --rm ${image} build-spec --chain=/${chain} --disable-default-bootnode > ${tmpChainSpec}`,
     );
   } else {
-    exec(`docker run --rm ${image} build-spec --chain=${chain} --disable-default-bootnode > ${tmpChainSpec}`);
+    exec(`stdbuf -i0 -o0 -e0 docker run --rm ${image} build-spec --chain=${chain} --disable-default-bootnode > ${tmpChainSpec}`);
   }
 
   let spec;
@@ -121,7 +121,7 @@ const exportParachainGenesis = (parachain: Parachain, output: string) => {
 
   const tmpGenesisWasm = `${shell.tempdir()}/genesis-wasm-${new Date().toISOString().slice(0, 10)}`;
   exec(
-    `docker run -v "${absOutput}":/app --rm ${parachain.image} export-genesis-wasm ${args.join(
+    `stdbuf -i0 -o0 -e0 docker run -v "${absOutput}":/app --rm ${parachain.image} export-genesis-wasm ${args.join(
       ' ',
     )} > ${tmpGenesisWasm}`,
   );
@@ -131,7 +131,7 @@ const exportParachainGenesis = (parachain: Parachain, output: string) => {
 
   const tmpGenesisState = `${shell.tempdir()}/genesis-state-${new Date().toISOString().slice(0, 10)}`;
   exec(
-    `docker run -v "${absOutput}":/app --rm ${parachain.image} export-genesis-state ${args.join(
+    `stdbuf -i0 -o0 -e0 docker run -v "${absOutput}":/app --rm ${parachain.image} export-genesis-state ${args.join(
       ' ',
     )} > ${tmpGenesisState}`,
   );
@@ -240,7 +240,7 @@ const generateRelaychainGenesisFile = (config: Config, path: string, output: str
   fs.writeFileSync(tmpfile, jsonStringify(spec));
 
   exec(
-    `docker run --rm -v "${tmpfile}":/${config.relaychain.chain}.json ${config.relaychain.image} build-spec --raw --chain=/${config.relaychain.chain}.json --disable-default-bootnode > ${path}`,
+    `stdbuf -i0 -o0 -e0 docker run --rm -v "${tmpfile}":/${config.relaychain.chain}.json ${config.relaychain.image} build-spec --raw --chain=/${config.relaychain.chain}.json --disable-default-bootnode > ${path}`,
   );
 
   exec(`cp ${tmpfile} ${output}/rococo-tmp.json`);
@@ -274,7 +274,7 @@ const getAddress = (val: string) => {
  * @param image
  */
 const generateNodeKey = (image: string) => {
-  const res = exec(`docker run --rm ${image} key generate-node-key`);
+  const res = exec(`stdbuf -i0 -o0 -e0 docker run --rm ${image} key generate-node-key`);
   return {
     key: res.stdout.trim(),
     address: res.stderr.trim(),
