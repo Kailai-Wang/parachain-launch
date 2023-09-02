@@ -84,7 +84,9 @@ const getChainspec = (image: string, chain: string) => {
       `stdbuf -i0 -o0 -e0 docker run -v $(pwd)/${chain}:/${chain} --rm ${image} build-spec --chain=/${chain} --disable-default-bootnode > ${tmpChainSpec}`,
     );
   } else {
-    exec(`stdbuf -i0 -o0 -e0 docker run --rm ${image} build-spec --chain=${chain} --disable-default-bootnode > ${tmpChainSpec}`);
+    exec(
+      `stdbuf -i0 -o0 -e0 docker run --rm ${image} build-spec --chain=${chain} --disable-default-bootnode > ${tmpChainSpec}`,
+    );
   }
 
   let spec;
@@ -117,7 +119,7 @@ const exportParachainGenesis = (parachain: Parachain, output: string) => {
   }
 
   const absOutput = output.startsWith('/') ? output : `$(pwd)/"${output}"`;
-  console.log("output dir: ", absOutput);
+  console.log('output dir: ', absOutput);
 
   const tmpGenesisWasm = `${shell.tempdir()}/genesis-wasm-${new Date().toISOString().slice(0, 10)}`;
   exec(
