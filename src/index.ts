@@ -81,7 +81,7 @@ const getChainspec = (image: string, chain: string) => {
   const tmpChainSpec = `${shell.tempdir()}/${chain}-${new Date().toISOString().slice(0, 10)}.json`;
   if (chain.endsWith('.json')) {
     exec(
-      `stdbuf -o0 -e0  -v $(pwd)/${chain}:/${chain} --rm ${image} build-spec --chain=/${chain} --disable-default-bootnode > ${tmpChainSpec}`,
+      `stdbuf -o0 -e0 docker run -v $(pwd)/${chain}:/${chain} --rm ${image} build-spec --chain=/${chain} --disable-default-bootnode > ${tmpChainSpec}`,
     );
   } else {
     exec(
