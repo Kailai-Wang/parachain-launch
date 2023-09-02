@@ -243,7 +243,7 @@ const generateRelaychainGenesisFile = (config: Config, path: string, output: str
     `docker run --rm -v "${tmpfile}":/${config.relaychain.chain}.json ${config.relaychain.image} build-spec --raw --chain=/${config.relaychain.chain}.json --disable-default-bootnode > ${path}`,
   );
 
-  exec(`cp ${tmpfile} ${output}/${tmpfile}.tmp`);
+  exec(`cp ${tmpfile} ${output}/rococo-tmp.json`);
   shell.rm(tmpfile);
 
   console.log('Relaychain genesis generated at', path);
