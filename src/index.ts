@@ -125,7 +125,7 @@ const exportParachainGenesis = (parachain: Parachain, output: string) => {
     )} > ${tmpGenesisWasm}`,
   );
   const wasm = fs.readFileSync(tmpGenesisWasm).toString().trim();
-  exec(`ls -l ${tmpGenesisWasm}`);
+  exec(`cp ${tmpGenesisWasm} ${absOutput}`);
   shell.rm(tmpGenesisWasm);
 
   const tmpGenesisState = `${shell.tempdir()}/genesis-state-${new Date().toISOString().slice(0, 10)}`;
@@ -135,7 +135,7 @@ const exportParachainGenesis = (parachain: Parachain, output: string) => {
     )} > ${tmpGenesisState}`,
   );
   const state = fs.readFileSync(tmpGenesisState).toString().trim();
-  exec(`ls -l ${tmpGenesisState}`);
+  exec(`cp ${tmpGenesisState} ${absOutput}`);
   shell.rm(tmpGenesisState);
 
   return { state, wasm };
