@@ -117,6 +117,7 @@ const exportParachainGenesis = (parachain: Parachain, output: string) => {
   }
 
   const absOutput = output.startsWith('/') ? output : `$(pwd)/"${output}"`;
+  console.log("output dir: ", absOutput);
 
   const tmpGenesisWasm = `${shell.tempdir()}/genesis-wasm-${new Date().toISOString().slice(0, 10)}`;
   exec(
