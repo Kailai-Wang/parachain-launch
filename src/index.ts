@@ -77,17 +77,18 @@ const stripChainspecJsonName = (chain: string) => {
  * @param image
  * @param chain
  */
-const getChainspec = (image: string, chain: string) => {
+const getChainspec = (binary: string, chain: string) => {
   const tmpChainSpec = `${shell.tempdir()}/${chain}-${new Date().toISOString().slice(0, 10)}.json`;
-  if (chain.endsWith('.json')) {
-    exec(
-      `stdbuf -o0 -e0 docker run -v $(pwd)/${chain}:/${chain} --rm ${image} build-spec --chain=/${chain} --disable-default-bootnode > ${tmpChainSpec} && sleep 10`,
-    );
-  } else {
-    exec(
-      `stdbuf -o0 -e0 docker run --rm ${image} build-spec --chain=${chain} --disable-default-bootnode > ${tmpChainSpec} && sleep 10`,
-    );
-  }
+  // if (chain.endsWith('.json')) {
+  //   exec(
+  //     `stdbuf -o0 -e0 docker run -v $(pwd)/${chain}:/${chain} --rm ${image} build-spec --chain=/${chain} --disable-default-bootnode > ${tmpChainSpec} `,
+  //   );
+  // } else {
+  //   exec(
+  //     `stdbuf -o0 -e0 docker run --rm ${image} build-spec --chain=${chain} --disable-default-bootnode > ${tmpChainSpec} `,
+  //   );
+  // }
+  exec(`${binary} build-spec --chain=${chain} --disable-default-bootnode > ${tmpChainSpec}`);
 
   let spec;
 
@@ -121,20 +122,32 @@ const exportParachainGenesis = (parachain: Parachain, output: string) => {
   const absOutput = output.startsWith('/') ? output : `$(pwd)/"${output}"`;
 
   const tmpGenesisWasm = `${shell.tempdir()}/genesis-wasm-${new Date().toISOString().slice(0, 10)}`;
+  // exec(
+  //   `stdbuf -o0 -e0 docker run -v "${absOutput}":/app --rm ${parachain.image} export-genesis-wasm ${args.join(
+  //     ' ',
+  //   )} > ${tmpGenesisWasm}`,
+  // );
   exec(
-    `stdbuf -o0 -e0 docker run -v "${absOutput}":/app --rm ${parachain.image} export-genesis-wasm ${args.join(
-      ' ',
-    )} > ${tmpGenesisWasm} && sleep 10`,
+    `${absOutput}/litentry-collator export-genesis-wasm --chain=${absOutput}/${getChainspecName(
+      parachain.chain,
+      parachain.id,
+    )} > ${tmpGenesisWasm}`,
   );
   const wasm = fs.readFileSync(tmpGenesisWasm).toString().trim();
   exec(`cp ${tmpGenesisWasm} ${absOutput}`);
   shell.rm(tmpGenesisWasm);
 
   const tmpGenesisState = `${shell.tempdir()}/genesis-state-${new Date().toISOString().slice(0, 10)}`;
+  // exec(
+  //   `stdbuf -o0 -e0 docker run -v "${absOutput}":/app --rm ${parachain.image} export-genesis-state ${args.join(
+  //     ' ',
+  //   )} > ${tmpGenesisState} `,
+  // );
   exec(
-    `stdbuf -o0 -e0 docker run -v "${absOutput}":/app --rm ${parachain.image} export-genesis-state ${args.join(
-      ' ',
-    )} > ${tmpGenesisState} && sleep 10`,
+    `${absOutput}/litentry-collator export-genesis-state --chain=${absOutput}/${getChainspecName(
+      parachain.chain,
+      parachain.id,
+    )} > ${tmpGenesisState}`,
   );
   const state = fs.readFileSync(tmpGenesisState).toString().trim();
   exec(`cp ${tmpGenesisState} ${absOutput}`);
@@ -170,7 +183,9 @@ const generateRelaychainGenesisFile = (config: Config, path: string, output: str
     return fatal('Missing relaychain.image');
   }
 
-  const spec = getChainspec(relaychain.image, relaychain.chain);
+  // copy the polkadot binary
+  exec(`docker cp "$(docker create --rm ${config.relaychain.image}):/usr/bin/polkadot" ${output}`);
+  const spec = getChainspec(`${output}/polkadot`, relaychain.chain);
 
   // clear authorities
   const runtime = spec.genesis.runtime;
@@ -240,9 +255,10 @@ const generateRelaychainGenesisFile = (config: Config, path: string, output: str
   const tmpfile = `${shell.tempdir()}/${config.relaychain.chain}.json`;
   fs.writeFileSync(tmpfile, jsonStringify(spec));
 
-  exec(
-    `stdbuf -o0 -e0 docker run --rm -v "${tmpfile}":/${config.relaychain.chain}.json ${config.relaychain.image} build-spec --raw --chain=/${config.relaychain.chain}.json --disable-default-bootnode > ${path} && sleep 10`,
-  );
+  // exec(
+  //   `stdbuf -o0 -e0 docker run --rm -v "${tmpfile}":/${config.relaychain.chain}.json ${config.relaychain.image} build-spec --raw --chain=/${config.relaychain.chain}.json --disable-default-bootnode > ${path} `,
+  // );
+  exec(`${output}/polkadot build-spec --raw --chain=${tmpfile} --disable-default-bootnode > ${path}`);
   exec(`cp ${tmpfile} ${output}/rococo-tmp.json`);
   shell.rm(tmpfile);
 
@@ -274,7 +290,7 @@ const getAddress = (val: string) => {
  * @param image
  */
 const generateNodeKey = (image: string) => {
-  const res = exec(`stdbuf -o0 -e0 docker run --rm ${image} key generate-node-key && sleep 10`);
+  const res = exec(`stdbuf -o0 -e0 docker run --rm ${image} key generate-node-key `);
   return {
     key: res.stdout.trim(),
     address: res.stderr.trim(),
@@ -350,7 +366,7 @@ const generateParachainGenesisFile = (
 
   checkOverrideFile(filepath, yes);
 
-  const spec = getChainspec(image, chain.base);
+  const spec = getChainspec(`${output}/litentry-collator`, chain.base);
 
   spec.bootNodes = [];
 
@@ -466,6 +482,8 @@ const generate = async (config: Config, { output, yes }: { output: string; yes: 
   fs.mkdirSync(output, { recursive: true });
 
   for (const parachain of config.parachains) {
+    // copy the parachain binary
+    exec(`docker cp "$(docker create --rm ${parachain.image}):/usr/local/bin/litentry-collator" ${output}`);
     generateParachainGenesisFile(parachain.id, parachain.image, parachain.chain, output, yes);
   }
 
