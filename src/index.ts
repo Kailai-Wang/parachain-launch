@@ -133,10 +133,11 @@ const exportParachainGenesis = (parachain: Parachain, output: string) => {
 
 const jsonStringify = (spec: any) =>
   // JSON.stringify will serialize big number to scientific notation such as 1e+21, which is not supported by Substrate
-  JSON.stringify(spec, (_, v) => (typeof v === 'number' ? `@${BigInt(v).toString()}@` : v), 2).replace(
-    /"@(.*?)@"/g,
-    '$1',
-  );
+  JSON.stringify(
+    spec,
+    (_, v) => (typeof v === 'number' ? `@${v.toLocaleString('fullwide', { useGrouping: false })}@` : v),
+    2,
+  ).replace(/"@(.*?)@"/g, '$1');
 
 /**
  * Generate relay chain genesis file
@@ -480,8 +481,7 @@ const generate = async (config: Config, { output, yes }: { output: string; yes: 
     const name = `relaychain-${_.kebabCase(node.name)}`;
     const nodeConfig: DockerNode = {
       ports: [
-        ...(node.wsPort === false ? [] : [`${node.wsPort || 9944 + idx}:9944`]),
-        ...(node.rpcPort === false ? [] : [`${node.rpcPort || 9933 + idx}:9933`]),
+        ...(node.rpcPort === false ? [] : [`${node.rpcPort || 9944 + idx}:9944`]),
         ...(node.port === false ? [] : [`${node.port || 30333 + idx}:30333`]),
       ],
       volumes: [`${name}:/data`],
@@ -493,7 +493,6 @@ const generate = async (config: Config, { output, yes }: { output: string; yes: 
         '--base-path=/data',
         `--chain=/app/${config.relaychain.chain}.json`,
         '--validator',
-        '--ws-external',
         '--rpc-external',
         '--rpc-cors=all',
         `--name=${node.name}`,
@@ -521,11 +520,7 @@ const generate = async (config: Config, { output, yes }: { output: string; yes: 
       const name = `parachain-${parachain.id}-${nodeIdx}`;
 
       const nodeConfig: DockerNode = {
-        ports: [
-          `${parachainNode.wsPort || 9944 + idx}:9944`,
-          `${parachainNode.rpcPort || 9933 + idx}:9933`,
-          `${parachainNode.port || 30333 + idx}:30333`,
-        ],
+        ports: [`${parachainNode.rpcPort || 9944 + idx}:9944`, `${parachainNode.port || 30333 + idx}:30333`],
         volumes: [`${name}:${volumePath}`],
         build: {
           context: '.',
@@ -534,7 +529,6 @@ const generate = async (config: Config, { output, yes }: { output: string; yes: 
         command: [
           `--base-path=${volumePath}`,
           `--chain=/app/${getChainspecName(parachain.chain, parachain.id)}`,
-          '--ws-external',
           '--rpc-external',
           '--rpc-cors=all',
           `--name=${name}`,
